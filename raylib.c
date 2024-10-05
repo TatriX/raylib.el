@@ -165,15 +165,37 @@ static emacs_value
 rl_draw_circle(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 4);
 
-    float x = get_float(args[0]);
-    float y = get_float(args[1]);
-    float radius = get_float(args[2]);
+    int x = get_int(args[0]);
+    int y = get_int(args[1]);
+    int radius = get_int(args[2]);
     Color color = get_color(args[3]);
 
     DrawCircle(x, y, radius, color);
 
     return nil;
 }
+
+static emacs_value
+rl_draw_circle_v(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 3);
+
+    float x = get_float(aref(args[0], 0));
+    float y = get_float(aref(args[0], 1));
+    float radius = get_float(args[1]);
+    Color color = get_color(args[2]);
+
+    DrawCircleV((Vector2){x, y}, radius, color);
+
+    return nil;
+}
+
+static emacs_value
+rl_is_key_down(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsKeyDown(key) ? t : nil;
+}
+
 
 static emacs_value
 rl_draw_text(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
@@ -237,6 +259,9 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_clear_background, 1, "rl-clear-background", "TODO");
 
     make_function(rl_draw_circle, 4, "rl-draw-circle", "TODO");
+    make_function(rl_draw_circle_v, 3, "rl-draw-circle-v", "TODO");
+
+    make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
 
     make_function(rl_draw_text, 5, "rl-draw-text", "TODO");
 

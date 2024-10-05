@@ -1,12 +1,12 @@
 .POSIX:
 EMACS = emacs
-CFLAGS = -g -Wall # TODO: build with optimisations!
-LDFLAGS = -s
+CC = gcc
 
 all: raylib.el.so raylib.elc
 
 raylib.el.so: raylib.c
-	cc -g -shared -fPIC $(CFLAGS) $(LDFLAGS) -o raylib.el.so raylib.c -lraylib
+	$(CC) -fPIC -g -Wall -c raylib.c
+	$(CC) -shared -o raylib.el.so raylib.o -lraylib
 
 raylib.elc: raylib.el
 	$(EMACS) -Q --batch -L . -f batch-byte-compile raylib.el

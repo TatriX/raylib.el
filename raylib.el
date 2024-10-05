@@ -2,6 +2,7 @@
 
 (module-load (concat "raylib.el" module-file-suffix))
 
+;; Colors
 (defconst rl-lightgray [200 200 200 255])
 (defconst rl-gray [130 130 130 255])
 (defconst rl-darkgray [80 80 80 255])
@@ -30,6 +31,13 @@
 (defconst rl-magenta [255 0 255 255])
 (defconst rl-raywhite [245 245 245 255])
 
+;; Keys
+(defconst rl-key-right 262)
+(defconst rl-key-left 263)
+(defconst rl-key-down 264)
+(defconst rl-key-up 265)
+
+;; non-raylib stuff
 (defvar rl-dt (/ 1.0 60))
 (defvar rl-mainloop-timer nil)
 
@@ -49,5 +57,14 @@
   (cancel-timer rl-mainloop-timer)
   (setq rl-mainloop-timer nil)
   (rl-close-window))
+
+(defun rl-v2 (x y)
+  `[,x ,y])
+
+(defmacro rl-x (v)
+  `(aref ,v 0))
+
+(defmacro rl-y (v)
+  `(aref ,v 1))
 
 (provide 'raylib)
