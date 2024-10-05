@@ -17,12 +17,14 @@ bool has_window;
 
 // NOTE: emacs values *must* not be stored between calls.
 #define nil S("nil")
+#define t S("t")
 
 // TODO: figure out when this should be used actually
 #define check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
 
 #define get_float(value) env->extract_float(env, (value))
 #define get_int(value) env->extract_integer(env, (value))
+#define get_string(value) extract_string(env, (value))
 #define aref(vec, index) env->vec_get(env, (vec), (index))
 
 #define get_color(value) extract_color(env, (value))
@@ -60,6 +62,39 @@ call_signal(emacs_env *env, const char *error_symbol, const char *error_string, 
     env->non_local_exit_signal(env, signal, message);
 }
 
+
+// NOTE: This should be equal to MAX_TEXT_BUFFER_LENGTH
+char global_text_buffer[1024];
+
+typedef struct string {
+    char *text;
+    ptrdiff_t size;
+} string;
+
+static inline string
+extract_string(emacs_env *env, emacs_value value) {
+    struct string result;
+    env->copy_string_contents(env, value, NULL, &result.size);
+
+    if (result.size <= sizeof(global_text_buffer)) {
+        result.text = global_text_buffer;
+    }  else {
+        result.text = malloc(result.size);
+        assert(result.text);
+    }
+
+    env->copy_string_contents(env, value, result.text, &result.size);
+    return result;
+}
+
+static inline void
+free_string(struct string *string) {
+    if (string->size > sizeof(global_text_buffer)) {
+        free(string->text);
+    }
+    *string = (struct string){};
+}
+
 
 /// Exported functions
 
@@ -79,23 +114,30 @@ rl_init_window(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     if (env->non_local_exit_check(env) != emacs_funcall_exit_return)
         return nil;
 
-    ptrdiff_t title_len;
-    env->copy_string_contents(env, args[2], NULL, &title_len);
-    char *title = malloc(title_len);
-    assert(title);
-    env->copy_string_contents(env, args[2], title, &title_len);
-
-    InitWindow(screen_width, screen_height, title);
+    string title = get_string(args[2]);
+    InitWindow(screen_width, screen_height, title.text);
     has_window = true;
 
-    free(title);
+    free_string(&title);
 
     return nil;
 }
 
 static emacs_value
 rl_close_window(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
-    CloseWindow();
+    if (has_window) {
+        CloseWindow();
+        has_window = false;
+    }
+
+    return nil;
+}
+
+static emacs_value
+rl_window_should_close(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    if (WindowShouldClose()) {
+        return t;
+    }
     return nil;
 }
 
@@ -134,6 +176,22 @@ rl_draw_circle(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_draw_text(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 5);
+
+    string text = get_string(args[0]);
+    int x = get_int(args[1]);
+    int y = get_int(args[2]);
+    int font_size = get_int(args[3]);
+    Color color = get_color(args[4]);
+
+    DrawText(text.text, x, y, font_size, color);
+
+    free_string(&text);
+    return nil;
+}
+
+static emacs_value
 rl_get_time(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     return env->make_float(env, GetTime());
 }
@@ -142,7 +200,7 @@ rl_get_time(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 
 int
 emacs_module_init (struct emacs_runtime *runtime) {
-    printf("esdl is loading for %d\n", EMACS_MAJOR_VERSION);
+    printf("raylib was built againts %d\n", EMACS_MAJOR_VERSION);
 
     if (runtime->size < sizeof(*runtime)) {
         return 1;
@@ -171,10 +229,17 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     make_function(rl_init_window, 3, "rl-init-window", "TODO");
     make_function(rl_close_window, 0, "rl-close-window", "TODO");
+    make_function(rl_window_should_close, 0, "rl-window-should-close", "TODO");
+
     make_function(rl_begin_drawing, 0, "rl-begin-drawing", "TODO");
     make_function(rl_end_drawing, 0, "rl-end-drawing", "TODO");
+
     make_function(rl_clear_background, 1, "rl-clear-background", "TODO");
+
     make_function(rl_draw_circle, 4, "rl-draw-circle", "TODO");
+
+    make_function(rl_draw_text, 5, "rl-draw-text", "TODO");
+
     make_function(rl_get_time, 0, "rl-get-time", "TODO");
 
     emacs_value raylib = env->intern(env, "raylib");

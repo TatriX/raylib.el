@@ -6,14 +6,11 @@
 (rl-init-window screen-width screen-height "Emacs ❤ Raylib")
 ; (rl-set-target-fps 60)
 
-(defconst rl-darkgrey [80 80 80 255])
-(defconst rl-yellow [253 249 0 255])
-
 (defvar dt (/ 1.0 60))
 
 (defun my-mainloop ()
   (rl-begin-drawing)
-  (rl-clear-background rl-darkgrey)
+  (rl-clear-background rl-darkgray)
 
   (let ((x (+ (/ screen-width 2) (* 1000 (cos (* 3 (rl-get-time))) dt)))
         (y (+ (/ screen-height 2) (* 1000 (sin (* 3 (rl-get-time))) dt))))
