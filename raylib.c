@@ -15,54 +15,6 @@ bool has_window;
 
 #define S(s) (env->intern(env, s))
 
-// NOTE: emacs values *must* not be stored between calls.
-#define nil S("nil")
-#define t S("t")
-
-// TODO: figure out when this should be used actually
-#define check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
-
-#define get_float(value) env->extract_float(env, (value))
-#define get_int(value) env->extract_integer(env, (value))
-#define get_string(value) extract_string(env, (value))
-#define aref(vec, index) env->vec_get(env, (vec), (index))
-
-#define get_color(value) extract_color(env, (value))
-
-// NOTE: signal() must be called with string literals!
-#define signal(error_symbol, error_string) call_signal(env, error_symbol, error_string, sizeof(error_string) - 1)
-
-// NOTE: message() must be called with string literals!
-#define message(string) call_message(env, string, sizeof(string) - 1)
-
-static inline Color
-extract_color(emacs_env *env, emacs_value vec) {
-    int size = env->vec_size(env, vec);
-    assert(size == 4);
-    Color color = {
-        get_int(aref(vec, 0)),
-        get_int(aref(vec, 1)),
-        get_int(aref(vec, 2)),
-        get_int(aref(vec, 3)),
-    };
-    return color;
-}
-
-static void
-call_message(emacs_env *env, const char *text, int text_len) {
-    emacs_value message = env->intern(env, "message");
-    emacs_value string = env->make_string(env, text, text_len);
-    env->funcall(env, message, 1, &string);
-}
-
-static void
-call_signal(emacs_env *env, const char *error_symbol, const char *error_string, int error_string_len) {
-    emacs_value signal = env->intern(env, error_symbol);
-    emacs_value message = env->make_string(env, error_string, error_string_len);
-    env->non_local_exit_signal(env, signal, message);
-}
-
-
 // NOTE: This should be equal to MAX_TEXT_BUFFER_LENGTH
 char global_text_buffer[1024];
 
@@ -71,10 +23,50 @@ typedef struct string {
     ptrdiff_t size;
 } string;
 
+// NOTE: emacs values *must* not be stored between calls.
+#define nil S("nil")
+#define t S("t")
+
+// TODO: figure out when this should be used actually
+#define check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
+
+
+#define is_nil(value) (!env->is_not_nil(env, value))
+
+#define get_int(value) extract_int(env, value)
+#define get_float(value) extract_float(env, value)
+#define get_string(value) extract_string(env, value)
+
+#define aref(vec, index) env->vec_get(env, vec, index)
+#define get_vector2(value) extract_vector2(env, value)
+#define get_color(value) extract_color(env, value)
+
+// NOTE: signal() must be called with string literals!
+#define signal(error_symbol, error_string) call_signal(env, error_symbol, error_string, sizeof(error_string) - 1)
+
+// NOTE: message() must be called with string literals!
+#define message(string) call_message(env, string, sizeof(string) - 1)
+
+static void
+call_message(emacs_env *env, const char *text, int text_len) {
+    emacs_value string = env->make_string(env, text, text_len);
+    env->funcall(env, S("message"), 1, &string);
+}
+
+static void
+call_signal(emacs_env *env, const char *error_symbol, const char *error_string, int error_string_len) {
+    emacs_value message = env->make_string(env, error_string, error_string_len);
+    env->non_local_exit_signal(env, S("signal"), message);
+}
+
+// NOTE: free_string() must be called on the returned value
 static inline string
 extract_string(emacs_env *env, emacs_value value) {
     struct string result;
     env->copy_string_contents(env, value, NULL, &result.size);
+
+    // if the size is too big, most likely value is *not* a string
+    assert(result.size < 1024*1024*1024);
 
     if (result.size <= sizeof(global_text_buffer)) {
         result.text = global_text_buffer;
@@ -93,6 +85,80 @@ free_string(struct string *string) {
         free(string->text);
     }
     *string = (struct string){};
+}
+
+[[maybe_unused]]
+static void
+print_type_of(emacs_env *env, emacs_value value) {
+    emacs_value type = env->type_of(env, value);
+
+    char *fmt = "type is %s";
+    emacs_value string = env->make_string(env, fmt, sizeof(fmt));
+    env->funcall(env, S("message"), 2, (emacs_value[]){string, type});
+
+    /* emacs_value result = env->funcall(env, S("symbol-string"), 1, (emacs_value[]){type}); */
+    /* string name = get_string(result); */
+    /* printf("type-of: %s\n", name.text); */
+    /* free_string(&name); */
+}
+
+static inline int
+extract_int(emacs_env *env, emacs_value value) {
+    if (is_nil(value)) {
+        signal("type-error", "value is nil");
+        return 0;
+    }
+
+    int result = env->extract_integer(env, value);
+
+    // TODO: figure out a cleaner way to do this. Perhaps push it onto lisp side?
+    if (env->non_local_exit_check(env) != emacs_funcall_exit_return) {
+        env->non_local_exit_clear(env);
+        result = env->extract_float(env, value);
+    }
+
+    return result;
+}
+
+static inline double
+extract_float(emacs_env *env, emacs_value value) {
+    if (is_nil(value)) {
+        signal("type-error", "value is nil");
+        return 0;
+    }
+
+    double result = env->extract_float(env, value);
+
+    // TODO: figure out a cleaner way to do this. Perhaps push it onto lisp side?
+    if (env->non_local_exit_check(env) != emacs_funcall_exit_return) {
+        env->non_local_exit_clear(env);
+        result = env->extract_integer(env, value);
+    }
+    return result;
+}
+
+static inline Vector2
+extract_vector2(emacs_env *env, emacs_value value) {
+    float x = get_float(aref(value, 0));
+    float y = get_float(aref(value, 1));
+    return (Vector2){x, y};
+}
+
+static inline Color
+extract_color(emacs_env *env, emacs_value vec) {
+    int size = env->vec_size(env, vec);
+    if (size != 4) {
+        signal("wrong-type-argument", "expected color");
+        return (Color){};
+    }
+
+    Color color = {
+        get_int(aref(vec, 0)),
+        get_int(aref(vec, 1)),
+        get_int(aref(vec, 2)),
+        get_int(aref(vec, 3)),
+    };
+    return color;
 }
 
 
@@ -179,12 +245,24 @@ static emacs_value
 rl_draw_circle_v(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 3);
 
-    float x = get_float(aref(args[0], 0));
-    float y = get_float(aref(args[0], 1));
+    Vector2 v = get_vector2(args[0]);
     float radius = get_float(args[1]);
     Color color = get_color(args[2]);
 
-    DrawCircleV((Vector2){x, y}, radius, color);
+    DrawCircleV(v, radius, color);
+
+    return nil;
+}
+
+static emacs_value
+rl_draw_line_v(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 3);
+
+    Vector2 start = get_vector2(args[0]);
+    Vector2 end = get_vector2(args[1]);
+    Color color = get_color(args[2]);
+
+    DrawLineV(start, end, color);
 
     return nil;
 }
@@ -241,7 +319,7 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     printf("raylib: Using Emacs env version: %d\n", emacs_version);
 
-    emacs_value fset = env->intern(env, "fset");
+    emacs_value fset = S("fset");
 
 #define make_function(func, arity, name, docstring)                     \
     env->funcall(env, fset, 2, (emacs_value[]) {                        \
@@ -260,6 +338,8 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     make_function(rl_draw_circle, 4, "rl-draw-circle", "TODO");
     make_function(rl_draw_circle_v, 3, "rl-draw-circle-v", "TODO");
+
+    make_function(rl_draw_line_v, 3, "rl-draw-line-v", "TODO");
 
     make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
 

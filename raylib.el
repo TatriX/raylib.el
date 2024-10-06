@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-(module-load (concat "raylib.el" module-file-suffix))
+(load (concat "raylib.el" module-file-suffix))
 
 ;; Colors
 (defconst rl-lightgray [200 200 200 255])
@@ -45,16 +45,24 @@
 (declare-function rl-window-should-close  "raylib")
 
 (defun rl-run-mainloop (function &optional fps)
+  (when (timerp rl-mainloop-timer)
+    (cancel-timer rl-mainloop-timer))
+
   (when fps
     (setq rl-dt (/ 1.0 fps)))
 
-  (setq rl-mainloop-timer (run-at-time t rl-dt (lambda ()
-                                                 (if (rl-window-should-close)
-                                                     (rl-stop-mainloop)
-                                                   (funcall function))))))
+  (setq rl-mainloop-timer
+        (run-at-time t rl-dt (lambda ()
+                               (if (rl-window-should-close)
+                                   (rl-stop-mainloop)
+                                 (condition-case err (funcall function)
+                                   (error (message "Caught signal: %s; Stopping main loop" err)
+                                          (cancel-timer rl-mainloop-timer))))))))
 
 (defun rl-stop-mainloop ()
-  (cancel-timer rl-mainloop-timer)
+  (interactive)
+  (when (timerp rl-mainloop-timer)
+    (cancel-timer rl-mainloop-timer))
   (setq rl-mainloop-timer nil)
   (rl-close-window))
 
@@ -66,5 +74,13 @@
 
 (defmacro rl-y (v)
   `(aref ,v 1))
+
+
+(defun rl--debug-reload-module ()
+  (let* ((module (concat "raylib.el" module-file-suffix))
+        (tmpfile (make-temp-file (file-name-nondirectory module) nil module-file-suffix)))
+    (message "Reloading raylib from temp file %s" tmpfile)
+    (copy-file module tmpfile t)
+    (module-load tmpfile)))
 
 (provide 'raylib)
