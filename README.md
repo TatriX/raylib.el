@@ -1,13 +1,19 @@
 # raylib.el
 
-`raylib.is` is a [dynamic module](https://www.gnu.org/software/emacs/manual/html_node/elisp/Writing-Dynamic-Modules.html) for [raylib](https://www.raylib.com/)
+`raylib.el` is a [dynamic module](https://www.gnu.org/software/emacs/manual/html_node/elisp/Writing-Dynamic-Modules.html) for [raylib](https://www.raylib.com/)
 
-It is in a very early stage, so don't expect anything to work reliably
-or at all just yet.
+> [!WARNING]
+> The project is in a very early stage!
+> Please don't expect anything to work reliably or at all just yet.
+
+> [!CAUTION]
+> <h4>It can crash your Emacs!</h4>
 
 ## Installation
 Ensure you have `raylib` installed, for example in Arch you can do `pacman -S raylib`.
+
 Clone the repo and run make, which should build `raylib.el.so` dynamic module.
+
 ```
 cd ~/.emacs.d
 git clone https://github.com/TatriX/raylib.el raylib
