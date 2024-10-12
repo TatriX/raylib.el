@@ -1,15 +1,12 @@
 .POSIX:
-EMACS = emacs
-CC = gcc
 
 all: raylib.el.so raylib.elc
 
 raylib.el.so: raylib.c
-	$(CC) -fPIC -g -Wall -c raylib.c
-	$(CC) -shared -o raylib.el.so raylib.o -lraylib
+	gcc -fPIC -g -Wall raylib.c -shared -o raylib.el.so -lraylib
 
 raylib.elc: raylib.el
-	$(EMACS) -Q --batch -L . -f batch-byte-compile raylib.el
+	emacs -Q --batch -L . -f batch-byte-compile raylib.el
 
 test:
 	emacs -Q --module-assertions --load test.el

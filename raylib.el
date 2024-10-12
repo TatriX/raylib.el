@@ -76,12 +76,12 @@
 
       (run-at-time (max 0 (- rl-dt (- (float-time) t0))) nil #'rl-run-mainloop function))))
 
-(defun rl-stop-mainloop ()
-  (interactive)
-  (when (timerp rl-mainloop-timer)
-    (cancel-timer rl-mainloop-timer))
-  (setq rl-mainloop-timer nil)
-  (rl-close-window))
+;; (defun rl-stop-mainloop ()
+;;   (interactive)
+;;   (when (timerp rl-mainloop-timer)
+;;     (cancel-timer rl-mainloop-timer))
+;;   (setq rl-mainloop-timer nil)
+;;   (rl-close-window))
 
 (defun rl-v2 (x y)
   `[,x ,y])

@@ -1,3 +1,9 @@
+// NOTES
+// See https://phst.eu/emacs-modules
+
+// TODO:
+// - use `make_global_ref` for `nil` and the like?
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -27,9 +33,8 @@ typedef struct string {
 #define nil S("nil")
 #define t S("t")
 
-// TODO: figure out when this should be used actually
-#define check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
-
+// NOTE:
+#define exit_check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
 
 #define is_nil(value) (!env->is_not_nil(env, value))
 
@@ -56,7 +61,8 @@ call_message(emacs_env *env, const char *text, int text_len) {
 static void
 call_signal(emacs_env *env, const char *error_symbol, const char *error_string, int error_string_len) {
     emacs_value message = env->make_string(env, error_string, error_string_len);
-    env->non_local_exit_signal(env, S("signal"), message);
+    emacs_value data = env->funcall(env, S("list"), 1, &message);
+    env->non_local_exit_signal(env, S(error_symbol), data);
 }
 
 // NOTE: free_string() must be called on the returned value
@@ -105,16 +111,22 @@ print_type_of(emacs_env *env, emacs_value value) {
 static inline int
 extract_int(emacs_env *env, emacs_value value) {
     if (is_nil(value)) {
-        signal("type-error", "value is nil");
+        signal("wrong-type-argument", "expected int, got nil");
         return 0;
     }
 
     int result = env->extract_integer(env, value);
 
-    // TODO: figure out a cleaner way to do this. Perhaps push it onto lisp side?
     if (env->non_local_exit_check(env) != emacs_funcall_exit_return) {
         env->non_local_exit_clear(env);
         result = env->extract_float(env, value);
+    }
+
+    if (env->non_local_exit_check(env) != emacs_funcall_exit_return) {
+        env->non_local_exit_clear(env);
+        // TODO: pass the value itself to `wrong-type-argument`
+        signal("wrong-type-argument", "expected int");
+        return 0;
     }
 
     return result;
@@ -123,17 +135,23 @@ extract_int(emacs_env *env, emacs_value value) {
 static inline double
 extract_float(emacs_env *env, emacs_value value) {
     if (is_nil(value)) {
-        signal("type-error", "value is nil");
+        signal("wrong-type-argument", "expected float, got nil");
         return 0;
     }
 
     double result = env->extract_float(env, value);
 
-    // TODO: figure out a cleaner way to do this. Perhaps push it onto lisp side?
     if (env->non_local_exit_check(env) != emacs_funcall_exit_return) {
         env->non_local_exit_clear(env);
         result = env->extract_integer(env, value);
     }
+
+    if (env->non_local_exit_check(env) != emacs_funcall_exit_return) {
+        env->non_local_exit_clear(env);
+        signal("wrong-type-argument", "expected float");
+        return 0;
+    }
+
     return result;
 }
 
@@ -283,6 +301,9 @@ static emacs_value
 rl_draw_fps(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     int x = get_int(args[0]);
     int y = get_int(args[1]);
+
+    exit_check();
+
     DrawFPS(x, y);
     return nil;
 }
@@ -315,6 +336,7 @@ emacs_module_init (struct emacs_runtime *runtime) {
     printf("raylib was built againts %d\n", EMACS_MAJOR_VERSION);
 
     if (runtime->size < sizeof(*runtime)) {
+        printf("Dynamic size is smaller than static size.\n");
         return 1;
     }
 
@@ -326,8 +348,10 @@ emacs_module_init (struct emacs_runtime *runtime) {
         emacs_version = 30;
     else if (env->size >= sizeof (struct emacs_env_25))
         emacs_version = 25;
-    else
-        return 2; /* Unknown or unsupported version.  */
+    else {
+        printf("Unknown or unsupported version.\n");
+        return 2;
+    }
 
     printf("raylib: Using Emacs env version: %d\n", emacs_version);
 
