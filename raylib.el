@@ -44,23 +44,6 @@
 (declare-function rl-window-should-close  "raylib")
 (declare-function rl-get-frame-time  "raylib")
 
-;; TODO: remove me
-;; (defvar rl-mainloop-timer nil)
-;; (defun rl-run-mainloop-1 (function &optional fps)
-;;   (when (timerp rl-mainloop-timer)
-;;     (cancel-timer rl-mainloop-timer))
-
-;;   (when fps
-;;     (setq rl-dt (/ 1.0 fps)))
-
-;;   (setq rl-mainloop-timer
-;;         (run-at-time t rl-dt (lambda ()
-;;                                (if (rl-window-should-close)
-;;                                    (rl-stop-mainloop)
-;;                                  (condition-case err (funcall function rl-dt)
-;;                                    (error (message "Caught signal: %s; Stopping main loop" err)
-;;                                           (cancel-timer rl-mainloop-timer))))))))
-
 (defun rl-run-mainloop (function &optional fps)
   (when fps
     (setq rl-dt (/ 1.0 fps)))
@@ -75,13 +58,6 @@
         (error (message "raylib: caught error: %s" err)))
 
       (run-at-time (max 0 (- rl-dt (- (float-time) t0))) nil #'rl-run-mainloop function))))
-
-;; (defun rl-stop-mainloop ()
-;;   (interactive)
-;;   (when (timerp rl-mainloop-timer)
-;;     (cancel-timer rl-mainloop-timer))
-;;   (setq rl-mainloop-timer nil)
-;;   (rl-close-window))
 
 (defun rl-v2 (x y)
   `[,x ,y])
