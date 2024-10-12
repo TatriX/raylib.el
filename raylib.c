@@ -298,6 +298,20 @@ rl_is_key_down(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_is_key_up(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsKeyUp(key) ? t : nil;
+}
+
+static emacs_value
+rl_is_key_pressed(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsKeyPressed(key) ? t : nil;
+}
+
+static emacs_value
 rl_draw_fps(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     int x = get_int(args[0]);
     int y = get_int(args[1]);
@@ -380,6 +394,8 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_draw_line_v, 3, "rl-draw-line-v", "TODO");
 
     make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
+    make_function(rl_is_key_up, 1, "rl-is-key-up", "TODO");
+    make_function(rl_is_key_pressed, 1, "rl-is-key-pressed", "TODO");
 
     make_function(rl_draw_fps, 2, "rl-draw-fps", "TODO");
     make_function(rl_draw_text, 5, "rl-draw-text", "TODO");

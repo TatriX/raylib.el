@@ -32,10 +32,7 @@
 (defconst rl-raywhite [245 245 245 255])
 
 ;; Keys
-(defconst rl-key-right 262)
-(defconst rl-key-left 263)
-(defconst rl-key-down 264)
-(defconst rl-key-up 265)
+(require 'rl-const)
 
 ;; non-raylib stuff
 (defvar rl-dt (/ 1.0 60))

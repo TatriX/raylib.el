@@ -9,6 +9,9 @@
   (rl-begin-drawing)
   (rl-clear-background rl-darkgray)
 
+  (when (rl-is-key-pressed rl-key-space)
+    (message "Time: %s" (rl-get-time)))
+
   (let ((x (+ (/ screen-width 2) (* 1000 (cos (* 3 (rl-get-time))) dt)))
         (y (+ (/ screen-height 2) (* 1000 (sin (* 3 (rl-get-time))) dt))))
     (rl-draw-circle x y 100 rl-yellow))
