@@ -6,7 +6,7 @@
 
 (rl-init-window screen-width screen-height "raylib [core] example - basic window")
 
-(defun my-mainloop ()
+(defun my-mainloop (dt)
   (rl-begin-drawing)
   (rl-clear-background rl-darkgray)
   (rl-draw-text "Congrats! You created your first window!" 190 200 20 rl-lightgray)

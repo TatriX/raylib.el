@@ -10,7 +10,7 @@
 (defvar ball-position (rl-v2 (/ screen-width 2.0)
                              (/ screen-height 2.0)))
 
-(defun my-mainloop ()
+(defun my-mainloop (dt)
   (cond
    ((rl-is-key-down rl-key-right) (cl-incf (rl-x ball-position) 2))
    ((rl-is-key-down rl-key-left) (cl-decf (rl-x ball-position) 2))

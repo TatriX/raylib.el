@@ -208,6 +208,11 @@ rl_window_should_close(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr
 }
 
 static emacs_value
+rl_get_frame_time(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    return env->make_float(env, GetFrameTime());
+}
+
+static emacs_value
 rl_begin_drawing(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     BeginDrawing();
     return nil;
@@ -274,6 +279,13 @@ rl_is_key_down(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     return IsKeyDown(key) ? t : nil;
 }
 
+static emacs_value
+rl_draw_fps(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    int x = get_int(args[0]);
+    int y = get_int(args[1]);
+    DrawFPS(x, y);
+    return nil;
+}
 
 static emacs_value
 rl_draw_text(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
@@ -331,6 +343,8 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_close_window, 0, "rl-close-window", "TODO");
     make_function(rl_window_should_close, 0, "rl-window-should-close", "TODO");
 
+    make_function(rl_get_frame_time, 0, "rl-get-frame-time", "TODO");
+
     make_function(rl_begin_drawing, 0, "rl-begin-drawing", "TODO");
     make_function(rl_end_drawing, 0, "rl-end-drawing", "TODO");
 
@@ -343,6 +357,7 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
 
+    make_function(rl_draw_fps, 2, "rl-draw-fps", "TODO");
     make_function(rl_draw_text, 5, "rl-draw-text", "TODO");
 
     make_function(rl_get_time, 0, "rl-get-time", "TODO");

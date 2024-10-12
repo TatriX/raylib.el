@@ -8,7 +8,7 @@
 
 (rl-init-window screen-width screen-height "Gift Wrapping")
 
-(defun my-mainloop ()
+(defun my-mainloop (dt)
   (rl-begin-drawing)
   (rl-clear-background rl-darkgray)
 

@@ -1,25 +1,23 @@
 (require 'raylib)
 
-(defvar screen-width 1920)
-(defvar screen-height 1080)
+(defvar screen-width (/ (x-display-pixel-width) 2))
+(defvar screen-height (/ (x-display-pixel-height) 2))
 
 (rl-init-window screen-width screen-height "Emacs ❤ Raylib")
-; (rl-set-target-fps 60)
 
-(defvar dt (/ 1.0 60))
-
-(defun my-mainloop ()
+(defun my-mainloop (dt)
   (rl-begin-drawing)
   (rl-clear-background rl-darkgray)
 
   (let ((x (+ (/ screen-width 2) (* 1000 (cos (* 3 (rl-get-time))) dt)))
         (y (+ (/ screen-height 2) (* 1000 (sin (* 3 (rl-get-time))) dt))))
-    (rl-draw-circle (float x) (float y) (float 100) rl-yellow))
+    (rl-draw-circle x y 100 rl-yellow))
+  ;; (user-error "oops")
 
+  (rl-draw-fps 10 10)
   (rl-end-drawing))
 
-(setq my-mainloop-timer (run-at-time t dt #'my-mainloop))
+(rl-run-mainloop #'my-mainloop)
 
-; (cancel-timer my-mainloop-timer)
-
-; (rl-close-window)
+(when nil
+ (rl-close-window))

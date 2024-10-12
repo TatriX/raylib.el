@@ -39,25 +39,42 @@
 
 ;; non-raylib stuff
 (defvar rl-dt (/ 1.0 60))
-(defvar rl-mainloop-timer nil)
 
 (declare-function rl-close-window  "raylib")
 (declare-function rl-window-should-close  "raylib")
+(declare-function rl-get-frame-time  "raylib")
+
+;; TODO: remove me
+;; (defvar rl-mainloop-timer nil)
+;; (defun rl-run-mainloop-1 (function &optional fps)
+;;   (when (timerp rl-mainloop-timer)
+;;     (cancel-timer rl-mainloop-timer))
+
+;;   (when fps
+;;     (setq rl-dt (/ 1.0 fps)))
+
+;;   (setq rl-mainloop-timer
+;;         (run-at-time t rl-dt (lambda ()
+;;                                (if (rl-window-should-close)
+;;                                    (rl-stop-mainloop)
+;;                                  (condition-case err (funcall function rl-dt)
+;;                                    (error (message "Caught signal: %s; Stopping main loop" err)
+;;                                           (cancel-timer rl-mainloop-timer))))))))
 
 (defun rl-run-mainloop (function &optional fps)
-  (when (timerp rl-mainloop-timer)
-    (cancel-timer rl-mainloop-timer))
-
   (when fps
     (setq rl-dt (/ 1.0 fps)))
 
-  (setq rl-mainloop-timer
-        (run-at-time t rl-dt (lambda ()
-                               (if (rl-window-should-close)
-                                   (rl-stop-mainloop)
-                                 (condition-case err (funcall function)
-                                   (error (message "Caught signal: %s; Stopping main loop" err)
-                                          (cancel-timer rl-mainloop-timer))))))))
+  (let ((t0 (float-time)))
+    (if (rl-window-should-close)
+        (rl-close-window)
+      ;; NOTE: emacs can only call us while it's idle, and if we use
+      ;; (rl-get-frame-time) here animations become very jittery.
+      ;; So we pretend that we run with fixed timestep here.
+      (condition-case err (funcall function rl-dt)
+        (error (message "raylib: caught error: %s" err)))
+
+      (run-at-time (max 0 (- rl-dt (- (float-time) t0))) nil #'rl-run-mainloop function))))
 
 (defun rl-stop-mainloop ()
   (interactive)
