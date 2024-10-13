@@ -369,10 +369,10 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     printf("raylib: Using Emacs env version: %d\n", emacs_version);
 
-    emacs_value fset = S("fset");
+    emacs_value defalias = S("defalias");
 
 #define make_function(func, arity, name, docstring)                     \
-    env->funcall(env, fset, 2, (emacs_value[]) {                        \
+    env->funcall(env, defalias, 2, (emacs_value[]) {                        \
             env->intern(env, name),                                     \
             env->make_function(env, arity, arity, func, docstring, 0),  \
         })
@@ -401,6 +401,9 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_draw_text, 5, "rl-draw-text", "TODO");
 
     make_function(rl_get_time, 0, "rl-get-time", "TODO");
+
+    // TODO: use https://www.gnu.org/software/emacs/manual/html_node/elisp/Function-Documentation.html
+    // to announce function arguments.
 
     emacs_value raylib = env->intern(env, "raylib");
     env->funcall(env, S("provide"), 1, &raylib);
