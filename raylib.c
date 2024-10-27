@@ -46,6 +46,11 @@ typedef struct string {
 #define get_vector2(value) extract_vector2(env, value)
 #define get_color(value) extract_color(env, value)
 
+
+#define new_float(value) env->make_float(env, value)
+
+#define call(name, n, ...) env->funcall(env, S(name), n, (emacs_value[]){ __VA_ARGS__ })
+
 // NOTE: signal() must be called with string literals!
 #define signal(error_symbol, error_string) call_signal(env, error_symbol, error_string, sizeof(error_string) - 1)
 
@@ -55,7 +60,7 @@ typedef struct string {
 static void
 call_message(emacs_env *env, const char *text, int text_len) {
     emacs_value string = env->make_string(env, text, text_len);
-    env->funcall(env, S("message"), 1, &string);
+    call("message", 1, string);
 }
 
 static void
@@ -291,6 +296,20 @@ rl_draw_line_v(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_is_mouse_button_pressed(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsMouseButtonPressed(key) ? t : nil;
+}
+
+static emacs_value
+rl_get_mouse_position(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 0);
+    Vector2 position = GetMousePosition();
+    return call("vector", 2, new_float(position.x), new_float(position.y));
+}
+
+static emacs_value
 rl_is_key_down(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 1);
     int key = get_int(args[0]);
@@ -392,6 +411,9 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_draw_circle_v, 3, "rl-draw-circle-v", "TODO");
 
     make_function(rl_draw_line_v, 3, "rl-draw-line-v", "TODO");
+
+    make_function(rl_is_mouse_button_pressed, 1, "rl-is-mouse-button-pressed", "TODO");
+    make_function(rl_get_mouse_position, 0, "rl-get-mouse-position", "TODO");
 
     make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
     make_function(rl_is_key_up, 1, "rl-is-key-up", "TODO");

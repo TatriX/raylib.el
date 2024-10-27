@@ -31,7 +31,7 @@
 (defconst rl-magenta [255 0 255 255])
 (defconst rl-raywhite [245 245 245 255])
 
-;; Keys
+;; Keys, Mouse buttons etc
 (require 'rl-const)
 
 ;; non-raylib stuff
