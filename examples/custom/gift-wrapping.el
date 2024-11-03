@@ -15,7 +15,7 @@
   (random "8") ;; set random seed
   (let (points hull (n 12) (radius 12) (leftmost 0))
     (dotimes (i n)
-      (push (rl-v2 (random (- screen-width (* 10 radius)))
+      (push (rl-vector2 (random (- screen-width (* 10 radius)))
                    (random (- screen-height (* 10 radius))))
             points))
 

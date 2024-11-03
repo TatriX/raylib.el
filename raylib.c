@@ -37,19 +37,25 @@ typedef struct string {
 #define exit_check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
 
 #define is_nil(value) (!env->is_not_nil(env, value))
+#define eq(a, b) env->eq(env, a, b)
+
+#define call(name, n, ...) env->funcall(env, S(name), n, (emacs_value[]){ __VA_ARGS__ })
 
 #define get_int(value) extract_int(env, value)
 #define get_float(value) extract_float(env, value)
 #define get_string(value) extract_string(env, value)
 
 #define aref(vec, index) env->vec_get(env, vec, index)
+#define slot_value(object, slot) call("slot-value", 2, object, S(slot))
+
 #define get_vector2(value) extract_vector2(env, value)
 #define get_color(value) extract_color(env, value)
+#define get_rectangle(value) extract_rectangle(env, value)
+#define get_camera_2d(value) extract_camera_2d(env, value)
 
-
+#define new_int(value) env->make_integer(env, value)
 #define new_float(value) env->make_float(env, value)
-
-#define call(name, n, ...) env->funcall(env, S(name), n, (emacs_value[]){ __VA_ARGS__ })
+#define new_color(color) make_color(env, color)
 
 // NOTE: signal() must be called with string literals!
 #define signal(error_symbol, error_string) call_signal(env, error_symbol, error_string, sizeof(error_string) - 1)
@@ -184,6 +190,39 @@ extract_color(emacs_env *env, emacs_value vec) {
     return color;
 }
 
+static inline Rectangle
+extract_rectangle(emacs_env *env, emacs_value vec) {
+    int size = env->vec_size(env, vec);
+    if (size != 4) {
+        signal("wrong-type-argument", "expected rectangle");
+        return (Rectangle){};
+    }
+
+    Rectangle rec = {
+        get_float(aref(vec, 0)),
+        get_float(aref(vec, 1)),
+        get_float(aref(vec, 2)),
+        get_float(aref(vec, 3)),
+    };
+    return rec;
+}
+
+static inline Camera2D
+extract_camera_2d(emacs_env *env, emacs_value object) {
+    Camera2D camera = {
+        .offset = get_vector2(slot_value(object, "offset")),
+        .target = get_vector2(slot_value(object, "target")),
+        .rotation = get_float(slot_value(object, "rotation")),
+        .zoom = get_float(slot_value(object, "zoom")),
+    };
+    return camera;
+}
+
+static inline emacs_value
+make_color(emacs_env *env, Color color) {
+    return call("rl-color", 4, new_int(color.r), new_int(color.g), new_int(color.b), new_int(color.a));
+}
+
 
 /// Exported functions
 
@@ -248,6 +287,20 @@ rl_end_drawing(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_begin_mode_2d(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    Camera2D camera = get_camera_2d(args[0]);
+    BeginMode2D(camera);
+    return nil;
+}
+
+static emacs_value
+rl_end_mode_2d(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    EndMode2D();
+    return nil;
+}
+
+static emacs_value
 rl_clear_background(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 1);
     Color color = extract_color(env, args[0]);
@@ -293,6 +346,48 @@ rl_draw_rectangle(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     Color color = get_color(args[4]);
 
     DrawRectangle(posX, posY, width, height, color);
+
+    return nil;
+}
+
+static emacs_value
+rl_draw_rectangle_rec(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 2);
+
+    Rectangle rec = get_rectangle(args[0]);
+    Color color = get_color(args[1]);
+
+    DrawRectangleRec(rec, color);
+
+    return nil;
+}
+
+static emacs_value
+rl_draw_rectangle_lines(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 5);
+
+    int posX = get_int(args[0]);
+    int posY = get_int(args[1]);
+    int width = get_int(args[2]);
+    int height = get_int(args[3]);
+    Color color = get_color(args[4]);
+
+    DrawRectangleLines(posX, posY, width, height, color);
+
+    return nil;
+}
+
+static emacs_value
+rl_draw_line(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 5);
+
+    int startPosX = get_int(args[0]);
+    int startPosY = get_int(args[1]);
+    int endPosX = get_int(args[2]);
+    int endPosY = get_int(args[3]);
+    Color color = get_color(args[4]);
+
+    DrawLine(startPosX, startPosY, endPosX, endPosY, color);
 
     return nil;
 }
@@ -380,8 +475,29 @@ rl_draw_text(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_fade(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 2);
+
+    Color color = get_color(args[0]);
+    float alpha = get_float(args[1]);
+
+    return new_color(Fade(color, alpha));
+}
+
+static emacs_value
+rl_get_random_value(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 2);
+
+    int min = get_int(args[0]);
+    int max = get_int(args[1]);
+
+    return new_float(GetRandomValue(min, max));
+}
+
+
+static emacs_value
 rl_get_time(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
-    return env->make_float(env, GetTime());
+    return new_float(GetTime());
 }
 
 
@@ -424,17 +540,25 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     make_function(rl_get_frame_time, 0, "rl-get-frame-time", "TODO");
 
+
+
     make_function(rl_begin_drawing, 0, "rl-begin-drawing", "TODO");
     make_function(rl_end_drawing, 0, "rl-end-drawing", "TODO");
+
+    make_function(rl_begin_mode_2d, 1, "rl-begin-mode-2d", "TODO");
+    make_function(rl_end_mode_2d, 0, "rl-end-mode-2d", "TODO");
 
     make_function(rl_clear_background, 1, "rl-clear-background", "TODO");
 
     make_function(rl_draw_circle, 4, "rl-draw-circle", "TODO");
     make_function(rl_draw_circle_v, 3, "rl-draw-circle-v", "TODO");
 
+    make_function(rl_draw_line, 5, "rl-draw-line", "TODO");
     make_function(rl_draw_line_v, 3, "rl-draw-line-v", "TODO");
 
     make_function(rl_draw_rectangle, 5, "rl-draw-rectangle", "TODO");
+    make_function(rl_draw_rectangle_rec, 2, "rl-draw-rectangle-rec", "TODO");
+    make_function(rl_draw_rectangle_lines, 5, "rl-draw-rectangle-lines", "TODO");
 
     make_function(rl_is_mouse_button_pressed, 1, "rl-is-mouse-button-pressed", "TODO");
     make_function(rl_get_mouse_position, 0, "rl-get-mouse-position", "TODO");
@@ -446,6 +570,10 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     make_function(rl_draw_fps, 2, "rl-draw-fps", "TODO");
     make_function(rl_draw_text, 5, "rl-draw-text", "TODO");
+
+    make_function(rl_fade, 2, "rl-fade", "TODO");
+
+    make_function(rl_get_random_value, 2, "rl-get-random-value", "TODO");
 
     make_function(rl_get_time, 0, "rl-get-time", "TODO");
 

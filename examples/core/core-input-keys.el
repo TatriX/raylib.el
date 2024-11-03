@@ -8,7 +8,7 @@
 
 (rl-init-window screen-width screen-height "raylib [core] example - keyboard input")
 
-(defvar ball-position (rl-v2 (/ screen-width 2.0)
+(defvar ball-position (rl-vector2 (/ screen-width 2.0)
                              (/ screen-height 2.0)))
 
 (defun my-mainloop (dt)

@@ -7,7 +7,7 @@
 
 (rl-init-window screen-width screen-height "raylib [core] example - mouse input")
 
-(defvar ball-position (rl-v2 -100 -100))
+(defvar ball-position (rl-vector2 -100 -100))
 (defvar ball-color rl-darkblue)
 
 (defun my-mainloop (dt)

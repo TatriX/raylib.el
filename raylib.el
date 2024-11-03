@@ -1,5 +1,8 @@
 ;; -*- lexical-binding: t; -*-
 
+(require 'cl-lib)
+(require 'eieio)
+
 (load (concat "raylib.el" module-file-suffix))
 
 ;; Colors
@@ -48,16 +51,25 @@
   (let ((t0 (float-time)))
     (if (rl-window-should-close)
         (rl-close-window)
-      ;; NOTE: emacs can only call us while it's idle, and if we use
-      ;; (rl-get-frame-time) here animations become very jittery.
-      ;; So we pretend that we run with fixed timestep here.
       (condition-case err (funcall function rl-dt)
         (error (message "raylib: caught error: %s" err)))
 
+      ;; NOTE: emacs can only call us while it's idle, and if we use
+      ;; (rl-get-frame-time) here animations become very jittery.
+      ;; So we pretend that we run with fixed timestep here.
       (run-at-time (max 0 (- rl-dt (- (float-time) t0))) nil #'rl-run-mainloop function))))
 
-(defun rl-v2 (x y)
+(defun rl-vector2 (x y)
+  "Return a Vector2"
   `[,x ,y])
+
+(defun rl-color (r g b a)
+  "Return a Color."
+  (vector r g b a))
+
+(defun rl-rectangle (x y with height)
+  "Return a Rectangle."
+  (vector x y with height))
 
 (defmacro rl-x (v)
   `(aref ,v 0))
@@ -65,6 +77,28 @@
 (defmacro rl-y (v)
   `(aref ,v 1))
 
+(defmacro rl-width (v)
+  `(aref ,v 2))
+
+(defmacro rl-height (v)
+  `(aref ,v 3))
+
+(defclass rl-camera-2d ()
+  ((offset :initarg :offset
+           :initform '(rl-vector2 0 0))
+   (target :initarg :target
+           :initform '(rl-vector2 0 0))
+   (rotation :initarg :rotation
+             :initform 0)
+   (zoom :initarg :zoom
+         :initform 1)))
+
+(defmacro rl-with-camera-2d (camera &rest body)
+  (declare (indent 1))
+  `(progn
+     (rl-begin-mode-2d ,camera)
+     ,@body
+     (rl-end-mode-2d)))
 
 (defun rl--debug-reload-module ()
   (let* ((module (concat "raylib.el" module-file-suffix))
