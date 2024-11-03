@@ -283,6 +283,21 @@ rl_draw_circle_v(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_draw_rectangle(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 5);
+
+    int posX = get_int(args[0]);
+    int posY = get_int(args[1]);
+    int width = get_int(args[2]);
+    int height = get_int(args[3]);
+    Color color = get_color(args[4]);
+
+    DrawRectangle(posX, posY, width, height, color);
+
+    return nil;
+}
+
+static emacs_value
 rl_draw_line_v(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 3);
 
@@ -307,6 +322,13 @@ rl_get_mouse_position(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr)
     assert(n == 0);
     Vector2 position = GetMousePosition();
     return call("vector", 2, new_float(position.x), new_float(position.y));
+}
+
+static emacs_value
+rl_get_mouse_wheel_move(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 0);
+    float move = GetMouseWheelMove();
+    return new_float(move);
 }
 
 static emacs_value
@@ -412,8 +434,11 @@ emacs_module_init (struct emacs_runtime *runtime) {
 
     make_function(rl_draw_line_v, 3, "rl-draw-line-v", "TODO");
 
+    make_function(rl_draw_rectangle, 5, "rl-draw-rectangle", "TODO");
+
     make_function(rl_is_mouse_button_pressed, 1, "rl-is-mouse-button-pressed", "TODO");
     make_function(rl_get_mouse_position, 0, "rl-get-mouse-position", "TODO");
+    make_function(rl_get_mouse_wheel_move, 0, "rl-get-mouse-wheel-move", "TODO");
 
     make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
     make_function(rl_is_key_up, 1, "rl-is-key-up", "TODO");

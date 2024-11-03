@@ -1,4 +1,5 @@
 ;;; Based on https://github.com/raysan5/raylib/blob/5.0/examples/core/core_input_keys.c
+
 (require 'raylib)
 (require 'cl-lib)
 
