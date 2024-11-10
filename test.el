@@ -1,3 +1,4 @@
 (add-to-list 'load-path (file-name-directory (or load-file-name (buffer-file-name))))
-(find-file "examples/core/core-2d-camera.el")
+(toggle-debug-on-error)
+(find-file "examples/core/core-2d-camera-mouse-zoom.el")
 (eval-buffer)

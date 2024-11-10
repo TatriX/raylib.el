@@ -40,6 +40,8 @@
 ;; non-raylib stuff
 (defvar rl-dt (/ 1.0 60))
 
+(defvar rl-mainloop-function nil)
+
 (declare-function rl-close-window  "raylib")
 (declare-function rl-window-should-close  "raylib")
 (declare-function rl-get-frame-time  "raylib")
@@ -48,20 +50,29 @@
   (when fps
     (setq rl-dt (/ 1.0 fps)))
 
-  (let ((t0 (float-time)))
-    (if (rl-window-should-close)
-        (rl-close-window)
-      (condition-case err (funcall function rl-dt)
-        (error (message "raylib: caught error: %s" err)))
+  (setq rl-mainloop-function
+        (lambda ()
+          (let ((t0 (float-time)))
+            (if (rl-window-should-close)
+                (rl-close-window)
+              (condition-case err (funcall function rl-dt)
+                (error (message "raylib caught error: %s" err)))
 
-      ;; NOTE: emacs can only call us while it's idle, and if we use
-      ;; (rl-get-frame-time) here animations become very jittery.
-      ;; So we pretend that we run with fixed timestep here.
-      (run-at-time (max 0 (- rl-dt (- (float-time) t0))) nil #'rl-run-mainloop function))))
+              ;; NOTE: emacs can only call us while it's idle, and if we use
+              ;; (rl-get-frame-time) here animations become very jittery.
+              ;; So we pretend that we run with fixed timestep here.
+              (when rl-mainloop-function
+                (let ((time (max 0 (- rl-dt (- (float-time) t0)))))
+                  (run-at-time time nil rl-mainloop-function)))))))
+
+  (funcall rl-mainloop-function))
+
+(defun rl-stop-mainloop ()
+  (setq rl-mainloop-function nil))
 
 (defun rl-vector2 (x y)
   "Return a Vector2"
-  `[,x ,y])
+  (vector x y))
 
 (defun rl-color (r g b a)
   "Return a Color."
@@ -71,6 +82,7 @@
   "Return a Rectangle."
   (vector x y with height))
 
+;; TODO: use (define-inline)
 (defmacro rl-x (v)
   `(aref ,v 0))
 
@@ -85,9 +97,9 @@
 
 (defclass rl-camera-2d ()
   ((offset :initarg :offset
-           :initform '(rl-vector2 0 0))
+           :initform '[0 0])
    (target :initarg :target
-           :initform '(rl-vector2 0 0))
+           :initform '[0 0])
    (rotation :initarg :rotation
              :initform 0)
    (zoom :initarg :zoom

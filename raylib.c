@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <raylib.h>
+#include <rlgl.h>
 
 #include <emacs-module.h>
 
@@ -33,7 +34,6 @@ typedef struct string {
 #define nil S("nil")
 #define t S("t")
 
-// NOTE:
 #define exit_check() if (env->non_local_exit_check(env) != emacs_funcall_exit_return) return nil;
 
 #define is_nil(value) (!env->is_not_nil(env, value))
@@ -53,7 +53,10 @@ typedef struct string {
 #define get_rectangle(value) extract_rectangle(env, value)
 #define get_camera_2d(value) extract_camera_2d(env, value)
 
+// NOTE:IMPORTANT: Be careful when using all of these macros, make
+// sure you don't cause multiple evaluation of arguments.
 #define new_int(value) env->make_integer(env, value)
+#define new_vector2(value) call("vector", 2, new_float(value.x), new_float(value.y));
 #define new_float(value) env->make_float(env, value)
 #define new_color(color) make_color(env, color)
 
@@ -413,10 +416,38 @@ rl_is_mouse_button_pressed(emacs_env *env, ptrdiff_t n, emacs_value *args, void 
 }
 
 static emacs_value
+rl_is_mouse_button_down(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsMouseButtonDown(key) ? t : nil;
+}
+
+static emacs_value
+rl_is_mouse_button_released(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsMouseButtonReleased(key) ? t : nil;
+}
+
+static emacs_value
+rl_is_mouse_button_up(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 1);
+    int key = get_int(args[0]);
+    return IsMouseButtonUp(key) ? t : nil;
+}
+
+static emacs_value
 rl_get_mouse_position(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 0);
     Vector2 position = GetMousePosition();
-    return call("vector", 2, new_float(position.x), new_float(position.y));
+    return new_vector2(position)
+}
+
+static emacs_value
+rl_get_mouse_delta(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 0);
+    Vector2 delta = GetMouseDelta();
+    return new_vector2(delta);
 }
 
 static emacs_value
@@ -424,6 +455,17 @@ rl_get_mouse_wheel_move(emacs_env *env, ptrdiff_t n, emacs_value *args, void *pt
     assert(n == 0);
     float move = GetMouseWheelMove();
     return new_float(move);
+}
+
+static emacs_value
+rl_get_screen_to_world_2d(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 2);
+
+    Vector2 position = get_vector2(args[0]);
+    Camera2D camera = get_camera_2d(args[1]);
+
+    Vector2 result = GetScreenToWorld2D(position, camera);
+    return new_vector2(result);
 }
 
 static emacs_value
@@ -475,6 +517,18 @@ rl_draw_text(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 }
 
 static emacs_value
+rl_draw_grid(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 2);
+
+    int slices = get_int(args[0]);
+    float spacing = get_float(args[1]);
+
+    DrawGrid(slices, spacing);
+
+    return nil;
+}
+
+static emacs_value
 rl_fade(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     assert(n == 2);
 
@@ -498,6 +552,47 @@ rl_get_random_value(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
 static emacs_value
 rl_get_time(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
     return new_float(GetTime());
+}
+
+
+
+static emacs_value
+rl_push_matrix(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 0);
+    rlPushMatrix();
+    return nil;
+}
+
+static emacs_value
+rl_pop_matrix(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 0);
+    rlPopMatrix();
+    return nil;
+}
+
+static emacs_value
+rl_translatef(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 3);
+
+    float x = get_float(args[0]);
+    float y = get_float(args[1]);
+    float z = get_float(args[2]);
+    rlTranslatef(x, y, z);
+
+    return nil;
+}
+
+static emacs_value
+rl_rotatef(emacs_env *env, ptrdiff_t n, emacs_value *args, void *ptr) {
+    assert(n == 4);
+
+    float angle = get_float(args[0]);
+    float x = get_float(args[1]);
+    float y = get_float(args[2]);
+    float z = get_float(args[3]);
+    rlRotatef(angle, x, y, z);
+
+    return nil;
 }
 
 
@@ -561,8 +656,15 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_draw_rectangle_lines, 5, "rl-draw-rectangle-lines", "TODO");
 
     make_function(rl_is_mouse_button_pressed, 1, "rl-is-mouse-button-pressed", "TODO");
+    make_function(rl_is_mouse_button_down, 1, "rl-is-mouse-button-down", "TODO");
+    make_function(rl_is_mouse_button_released, 1, "rl-is-mouse-button-released", "TODO");
+    make_function(rl_is_mouse_button_up, 1, "rl-is-mouse-button-up", "TODO");
+
     make_function(rl_get_mouse_position, 0, "rl-get-mouse-position", "TODO");
+    make_function(rl_get_mouse_delta, 0, "rl-get-mouse-delta", "TODO");
     make_function(rl_get_mouse_wheel_move, 0, "rl-get-mouse-wheel-move", "TODO");
+
+    make_function(rl_get_screen_to_world_2d, 2, "rl-get-screen-to-world-2d", "TODO");
 
     make_function(rl_is_key_down, 1, "rl-is-key-down", "TODO");
     make_function(rl_is_key_up, 1, "rl-is-key-up", "TODO");
@@ -571,11 +673,20 @@ emacs_module_init (struct emacs_runtime *runtime) {
     make_function(rl_draw_fps, 2, "rl-draw-fps", "TODO");
     make_function(rl_draw_text, 5, "rl-draw-text", "TODO");
 
+    make_function(rl_draw_grid, 2, "rl-draw-grid", "TODO");
+
     make_function(rl_fade, 2, "rl-fade", "TODO");
 
     make_function(rl_get_random_value, 2, "rl-get-random-value", "TODO");
 
     make_function(rl_get_time, 0, "rl-get-time", "TODO");
+
+
+    // NOTE: rlgl.h stuff
+    make_function(rl_push_matrix, 0, "rl-push-matrix", "TODO");
+    make_function(rl_pop_matrix, 0, "rl-pop-matrix", "TODO");
+    make_function(rl_translatef, 3, "rl-translatef", "TODO");
+    make_function(rl_rotatef, 4, "rl-rotatef", "TODO");
 
     // TODO: use https://www.gnu.org/software/emacs/manual/html_node/elisp/Function-Documentation.html
     // to announce function arguments.

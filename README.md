@@ -34,3 +34,17 @@ Now you can try running the [examples](./examples):
 (find-file "~/.emacs.d/raylib/examples/core/core-basic-window.el")
 (eval-buffer)
 ```
+
+## Debugging
+When an error occurs in the main loop managed by `rl-run-mainloop` it
+is caught and reported as `raylib caught error: ...`. Main loop will
+continue running and generating the same error, because we don't want
+to interrupt your flow in case you just made a typo.
+
+You may also want to stop the main loop and run your function
+manually, potentially using `edebug` to step it through:
+
+```elisp
+(rl-stop-mainloop)
+(my-mainloop rl-dt)
+```
